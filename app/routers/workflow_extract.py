@@ -105,7 +105,7 @@ def extract_workflow_data(
         reserved_at = now
         inserted_count = 0
 
-        for s in reserved_rows:
+        for s in selected_rows:
             fv = s.field_values
             if isinstance(fv, str):
                 try:
