@@ -35,7 +35,10 @@ from app.routers import fnr_workflow_execution_log
 from app.routers import distinct_value
 from app.routers import lock_unlock
 from app.routers import workflow_summary
-from app.routers import fnr_project_summary
+from app.routers import fnr_project_summary 
+
+#import router as project_summary_router, workflow_router
+
 from fastapi import FastAPI
 from app.routers import gold_copy_table_list
 from app.routers import workflow_extract 
@@ -194,6 +197,7 @@ app.include_router(lock_unlock.router)
 app.include_router(workflow_summary.router)
 app.include_router(fnr_project_summary.router)
 app.include_router(gold_copy_table_list.router)
+#app.include_router(fnr_project_summary.workflow_router) # new
 app.include_router(fnr_project_summary.workflow_router) # new
 app.include_router(workflow_extract.router)
 

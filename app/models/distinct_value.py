@@ -20,3 +20,4 @@ class MiningWorkflowInputCriteria(Base):
     source_table   = Column(String(100))
     source_column  = Column(String(100))
     type_of_field  = Column(String(100), nullable=True)
+    source_schema = Column(String(100))

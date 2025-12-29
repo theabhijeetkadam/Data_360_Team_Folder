@@ -25,3 +25,4 @@ class MiningWorkflowInputCriteria(Base):
     business_name = Column(String(255))
     source_table = Column(String(100))
     source_column = Column(String(100))
+    source_schema= Column(String(100))

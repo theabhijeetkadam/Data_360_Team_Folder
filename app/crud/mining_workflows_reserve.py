@@ -22,7 +22,7 @@ def _validate_project(db: Session, project_id: Optional[int], project_name: Opti
     """
     Validates project existence with strict matching rules:
     - If both id and name provided: they must point to the same row.
-    - If only id provided: id must   exist.
+    - If only id provided: id must exist.
     - If only name provided: name must exist.
     Returns the Project row (for hydration) if valid, else raises 404.
     """
