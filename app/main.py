@@ -12,8 +12,8 @@ from app.exceptions import (
 )
 from app.routers import environment_instance
 from app.routers import status
-from .routers import dashboard
-from .models import project
+from app.routers import dashboard
+from app.models import project
 from app.routers import user, auth
 #from app.middleware.rbac import RBACMiddleware as RBACMiddleware
 
