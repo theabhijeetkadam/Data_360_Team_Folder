@@ -18,7 +18,7 @@ router = APIRouter(prefix="/generate-query-fq", tags=["Query Generator (FQ)"])
 
 ALLOWED_SCHEMAS = {"gold_copy", "clientdb"}
 ALLOWED_OPERATORS = {"=", "!=", ">", "<", ">=", "<=", "IN", "NOT IN", "LIKE", "ILIKE"}
-ALLOWED_TABLES = {"Customer", "Customer_cards"}
+ALLOWED_TABLES = {"Customer", "Customer_cards","Customer_address","Customer_rewards","Customer_payments"}
 DISTINCT_KEY_MAP = {("gold_copy", "Customer"): ("customer_id", True)}
 
 _INT_RE = re.compile(r"^-?\d+$")
@@ -180,10 +180,10 @@ def generate_query_fq(selection: UserSelection, db: Session = Depends(get_db)):
 
         select_parts = [
             f"{distinct_key_q} AS \"__data_key\"",
-            f"{base_table_q}.customer_city AS \"city\"",
-            f"{base_table_q}.card_type AS \"credit_check\"",
-            f"{base_table_q}.card_limit AS \"ab\"",
-            f"{base_table_q}.card_limit AS \"ade\"",
+            # f"{base_table_q}.customer_city AS \"city\"",
+            # f"{base_table_q}.card_type AS \"credit_check\"",
+            # f"{base_table_q}.card_limit AS \"ab\"",
+            # f"{base_table_q}.card_limit AS \"ade\"",
         ]
 
         tables_set = {t for (_, t) in used_tables}

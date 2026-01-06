@@ -5,7 +5,7 @@ from typing import List, Union, Literal
 
 # Keep these in sync with router
 ALLOWED_SCHEMAS = {"gold_copy"}
-ALLOWED_TABLES = {"Customer", "Customer_cards"}
+ALLOWED_TABLES = {"Customer", "Customer_cards","Customer_address","Customer_rewards","Customer_payments"}
 
 ALLOWED_OPERATORS = {
     "=", "!=", ">", "<", ">=", "<=",
