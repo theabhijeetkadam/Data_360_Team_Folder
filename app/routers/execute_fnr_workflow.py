@@ -8,9 +8,9 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 
 log = logging.getLogger(__name__)
-router = APIRouter(prefix="/execute_fnr_workflow", tags=["FnR Workflow Execution"])
+router = APIRouter(prefix="/execute-fnr-workflow", tags=["FnR Workflow Execution"])
 
-ALLOWED_OPS = {"=", "!=", "<", "<=", ">", ">=", "LIKE", "ILIKE"}
+ALLOWED_OPS = {"=", "!=", "<", "<=", ">", ">="}
 
 class Condition(BaseModel):
     business_name: str
@@ -149,7 +149,11 @@ def execute_fnr(payload: FnRExecutePayload, db):
     db.execute(text("SET search_path TO gold_copy"))
     result = db.execute(text(final_query), params)
     rows = result.mappings().all()
-    return rows
+    payload = {
+        "workflow_id": wid,
+        "result": rows            
+    }
+    return payload
 
 @router.post("/")
 def post_execute(payload: FnRExecutePayload, db: Session = Depends(get_db)):
