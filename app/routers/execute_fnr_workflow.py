@@ -143,7 +143,7 @@ def execute_fnr(payload: FnRExecutePayload, db):
     select_sql = ", ".join(select_cols)
     join_sql = " ".join(join_clauses)
     where_sql = (" WHERE " + " AND ".join(where_parts)) if where_parts else ""
-    final_query = f"SELECT {select_sql} FROM {base_table} {join_sql}{where_sql} LIMIT :limit"
+    final_query = f"SELECT distinct {select_sql} FROM {base_table} {join_sql}{where_sql} LIMIT :limit"
 
     # --- 7) Execute and return rows (list of dicts) ---
     db.execute(text("SET search_path TO gold_copy"))
