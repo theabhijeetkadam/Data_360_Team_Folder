@@ -4,23 +4,20 @@ from pydantic import BaseModel
 from typing import Optional, List
 
 # -----------------------------
-# Existing: Project Summary Out
+# Project Summary (one row per project; aggregated across environments)
 # -----------------------------
 class FnrProjectSummaryOut(BaseModel):
-    workflow_id: int
-    workflow_name: str
-    project_id: int                  # ✅ NEW: include project_id in response
+    project_id: int
     project_name: str
-    environment_name: str
-    module_name: str
     number_of_modules: int
     number_of_workflows: int
 
     class Config:
+        # If you're on Pydantic v2, use: from_attributes = True
         orm_mode = True
 
 # ---------------------------------
-# Workflow Summary response (unchanged shape but now keyed by project_id in query)
+# Workflow Summary (unchanged; keyed by project_id via query)
 # ---------------------------------
 class FnrWorkflowSummaryItem(BaseModel):
     workflow_id: int
@@ -28,8 +25,8 @@ class FnrWorkflowSummaryItem(BaseModel):
 
 class FnrWorkflowSummaryOut(BaseModel):
     project_name: str
-    project_id: Optional[int] = None   # echoed from query param
+    project_id: Optional[int] = None  # echoed from query param / resolved via helper
     workflows: List[FnrWorkflowSummaryItem]
 
     class Config:
-        orm_mode = True
+           orm_mode = True
