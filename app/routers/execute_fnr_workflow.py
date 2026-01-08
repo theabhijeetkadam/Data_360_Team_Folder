@@ -134,6 +134,10 @@ def execute_fnr(payload: FnRExecutePayload, db):
         t, c = bn_to_tc[bn]
         if not (_is_ident(t) and _is_ident(c)):
             raise ValueError(f"Invalid identifier from input map: {t}.{c}")
+        
+        if isinstance(val, str) and val.lower() == "any":
+            where_parts.append(f"{t}.{c} = {t}.{c}")
+            continue
 
         pname = f"p{i}"
         where_parts.append(f"{t}.{c} {op} :{pname}")
