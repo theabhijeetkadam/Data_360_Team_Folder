@@ -202,6 +202,7 @@ app.include_router(gold_copy_table_list.router)
 #app.include_router(fnr_project_summary.workflow_router) # new
 app.include_router(fnr_project_summary.workflow_router) # new
 app.include_router(workflow_extract.router)
+app.include_router(dashboard.router)
 
 # ✅ No extra prefix here
 
