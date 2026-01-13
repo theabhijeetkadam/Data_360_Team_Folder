@@ -153,6 +153,67 @@ def execute_fnr(payload: FnRExecutePayload, db):
     db.execute(text("SET search_path TO gold_copy"))
     result = db.execute(text(final_query), params)
     rows = result.mappings().all()
+
+    #The logic added to find out which of the rows in result of the final_query were reserved
+    # and to remove these reserved data from final_query result
+    
+    # --- Step 1: get data_keys (columns marked reserved in output criteria) ---
+    # db.execute(text("SET search_path TO clientdb"))
+    dk_rows = db.execute(
+        text("""
+            SELECT source_column
+            FROM clientdb.mining_workflow_output_criteria_1
+            WHERE workflow_id = :wid
+            AND is_reserved = true
+        """),
+        {"wid": str(wid)},
+    ).mappings().all()
+    
+    data_keys = [r["source_column"] for r in dk_rows]
+
+    # Normalize to plain column names (strip table qualifiers like 'customer.customer_id' -> 'customer_id')
+    # data_keys = [str(r["source_column"]).split(".")[-1] for r in dk_rows]
+
+    # --- Step 2: collect reserved values by key from reservation_info and filter final_query rows ---
+    res_rows = db.execute(
+        text("""
+            SELECT data_keys, data_records
+            FROM clientdb.reservation_info
+            WHERE workflow_id = :wid
+        """),
+        {"wid": str(wid)},
+    ).mappings().all()
+
+    # Build a map of { key -> set(reserved_values) }
+    reserved_by_key = {k: set() for k in data_keys}
+    for rr in res_rows:
+        rr_keys = rr.get("data_keys") or []
+        # Normalize keys in the stored row as well
+        # rr_keys_norm = [str(k).split(".")[-1] for k in rr_keys]
+        records = rr.get("data_records") or []
+        for k in data_keys:
+            if k in rr_keys:
+                for rec in records:
+                    # Only consider records explicitly marked reserved = true
+                    if str(rec.get("reserved")).lower() == "true":
+                        val = rec.get(k)
+                        if val is not None:
+                            reserved_by_key[k].add(str(val))
+    
+    # Remove any final_query row if any of its key values are in reserved_by_key
+    filtered_rows = []
+    for row in rows:
+        drop = False
+        for k in data_keys:
+            v = row.get(k)
+            if v is not None and str(v) in reserved_by_key.get(k, set()):
+                drop = True
+                break
+        if not drop:
+            filtered_rows.append(row)
+
+    rows = filtered_rows
+
     payload = {
         "workflow_id": wid,
         "result": rows            

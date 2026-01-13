@@ -17,5 +17,5 @@ def error_response(code: int, message: str):
     return {"code": str(code), "message": message}
 
 @router.post("/", response_model=schemas.WorkflowExecutionLogCreate)
-def create_log(log: schemas.WorkflowExecutionLogCreate, db: Session = Depends(get_db)):
-    return crud.create_workflow_execution_log(db=db, log=log)
+def create_log(payload: schemas.WorkflowExecutionLogCreate, db: Session = Depends(get_db)):
+    return crud.create_workflow_execution_log(payload=payload, db=db)
