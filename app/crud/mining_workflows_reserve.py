@@ -3,22 +3,22 @@
 
 from typing import List, Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import select, union, func
+from sqlalchemy import select, union, func, and_
 from fastapi import HTTPException
 
 from app.models.mining_workflows_reserve import MiningWorkflowsReserve
 from app.models.project import Project
 from app.models.env import Environment
 from app.models.mining_workflow_input_criteria import MiningWorkflowInputCriteria
-from app.models import MiningWorkflowOutputCriteria
+# ✅ Explicit import to avoid ambiguity
+from app.models.mining_workflow_output_criteria import MiningWorkflowOutputCriteria
 
 from app.schemas.mining_workflows_reserve import (
     MiningWorkflowsReserveCreate,
     MiningWorkflowsReserveUpdate,
 )
 
-
-def _validate_project(db: Session, project_id: Optional[int], project_name: Optional[str]) -> Project:
+def _validate_project(db: Session, project_id: Optional[int], project_name: Optional[str]) -> Optional[Project]:
     """
     Validates project existence with strict matching rules:
     - If both id and name provided: they must point to the same row.
@@ -53,11 +53,11 @@ def _validate_project(db: Session, project_id: Optional[int], project_name: Opti
             raise HTTPException(status_code=404, detail=f"Project not found for project_name='{project_name}'")
         return row
 
-    # Neither provided: allow if your schema makes project optional; else raise 400/404 as per your rules
+    # Neither provided
     return None
 
 
-def _validate_environment(db: Session, env_id: Optional[int], environment_name: Optional[str]) -> Environment:
+def _validate_environment(db: Session, env_id: Optional[int], environment_name: Optional[str]) -> Optional[Environment]:
     """
     Validates environment existence with strict matching rules (same pattern as project).
     """
@@ -91,7 +91,7 @@ def _validate_environment(db: Session, env_id: Optional[int], environment_name: 
     return None
 
 
-# ---- List / Get (unchanged except inner-join read path if you adopted that) ----
+# ---- List / Get ----
 
 def get_all_workflows(db: Session, skip: int = 0, limit: int = 100):
     return (
@@ -101,12 +101,14 @@ def get_all_workflows(db: Session, skip: int = 0, limit: int = 100):
           .all()
     )
 
+
 def get_workflow_by_id(db: Session, workflow_id: int) -> Optional[MiningWorkflowsReserve]:
     return (
         db.query(MiningWorkflowsReserve)
           .filter(MiningWorkflowsReserve.workflow_id == workflow_id)
           .first()
     )
+
 
 def get_workflow_with_names_by_id(db: Session, workflow_id: int) -> Optional[MiningWorkflowsReserve]:
     stmt = (
@@ -128,14 +130,14 @@ def get_workflow_with_names_by_id(db: Session, workflow_id: int) -> Optional[Min
     return wf
 
 
-# ---- Create / Update with strict FK validation ----
+# ---- Create / Update ----
 
 def create_workflow(db: Session, workflow: MiningWorkflowsReserveCreate) -> MiningWorkflowsReserve:
-    # Validate & resolve project/environment according to rules
+    # Validate & resolve project/environment
     proj_row = _validate_project(db, workflow.project_id, workflow.project_name)
     env_row  = _validate_environment(db, workflow.env_id, workflow.env_name)
 
-    # If client provided only names, propagate resolved IDs from DB
+    # Resolve IDs if only names were provided
     resolved_project_id = workflow.project_id if workflow.project_id is not None else (proj_row.project_id if proj_row else None)
     resolved_env_id     = workflow.env_id if workflow.env_id is not None else (env_row.env_id if env_row else None)
 
@@ -145,7 +147,7 @@ def create_workflow(db: Session, workflow: MiningWorkflowsReserveCreate) -> Mini
         env_id=resolved_env_id,
     )
 
-    # Hydrate denormalized names strictly from DB (no arbitrary client overrides)
+    # Hydrate denormalized names from DB
     new_workflow.project_name = proj_row.project_name if proj_row else None
     new_workflow.env_name     = env_row.env_name if env_row else None
 
@@ -160,7 +162,7 @@ def update_workflow(db: Session, workflow_id: int, workflow: MiningWorkflowsRese
     if not db_workflow:
         return None
 
-    # Only validate fields being changed; but if name is provided, enforce strict match rules
+    # Validate according to what's being changed
     proj_row = _validate_project(
         db,
         workflow.project_id if workflow.project_id is not None else db_workflow.project_id if workflow.project_name is not None else None,
@@ -197,7 +199,14 @@ def delete_workflow(db: Session, workflow_id: int):
     return {"detail": "Workflow deleted successfully"}
 
 
+# ---- Source tables / columns helpers ----
+
 def get_all_source_tables_by_workflow(db: Session, workflow_id: int) -> List[str]:
+    """
+    Returns distinct source tables used in this workflow from:
+      - Input criteria (always)
+      - Output criteria (ONLY rows flagged via is_parameter_flag = TRUE)
+    """
     s_in = (
         select(func.trim(MiningWorkflowInputCriteria.source_table).label("source_table"))
         .where(
@@ -207,21 +216,64 @@ def get_all_source_tables_by_workflow(db: Session, workflow_id: int) -> List[str
         )
         .distinct()
     )
+
+    # ✅ Only include output criteria that are flagged
     s_out = (
         select(func.trim(MiningWorkflowOutputCriteria.source_table).label("source_table"))
         .where(
             MiningWorkflowOutputCriteria.workflow_id == workflow_id,
+            MiningWorkflowOutputCriteria.is_parameter_flag.is_(True),
             MiningWorkflowOutputCriteria.source_table.isnot(None),
             func.length(func.trim(MiningWorkflowOutputCriteria.source_table)) > 0,
         )
         .distinct()
     )
+
     union_stmt = union(s_in, s_out)
     raw_rows: List[str] = db.execute(union_stmt).scalars().all()
 
+    # Case-insensitive unique-ify, but preserve original casing of first occurrence
     seen_ci = {}
     for val in raw_rows:
         key = val.lower()
         if key not in seen_ci:
             seen_ci[key] = val
     return list(seen_ci.values())
+
+
+# ✅ NEW: Return flagged output columns for a workflow
+def get_flagged_output_columns_by_workflow(db: Session, workflow_id: int) -> List[str]:
+    """
+    Returns distinct source_column values from output criteria flagged as parameters.
+    """
+    q = (
+        select(func.trim(MiningWorkflowOutputCriteria.source_column).label("source_column"))
+        .where(
+            MiningWorkflowOutputCriteria.workflow_id == workflow_id,
+            MiningWorkflowOutputCriteria.is_parameter_flag.is_(True),
+            MiningWorkflowOutputCriteria.source_column.isnot(None),
+            func.length(func.trim(MiningWorkflowOutputCriteria.source_column)) > 0,
+        )
+        .distinct()
+    )
+    rows = db.execute(q).scalars().all()
+
+    # Case-insensitive unique-ify
+    seen_ci = {}
+    for val in rows:
+        key = val.lower()
+        if key not in seen_ci:
+            seen_ci[key] = val
+    return list(seen_ci.values())
+
+
+# ✅ NEW: Return full flagged rows for a workflow
+def get_flagged_output_criteria_by_workflow(db: Session, workflow_id: int) -> List[MiningWorkflowOutputCriteria]:
+    return (
+        db.query(MiningWorkflowOutputCriteria)
+        .filter(
+            MiningWorkflowOutputCriteria.workflow_id == workflow_id,
+            MiningWorkflowOutputCriteria.is_parameter_flag.is_(True),
+        )
+        .all()
+    )
