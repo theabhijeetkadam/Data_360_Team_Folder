@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+
+from sqlalchemy import Column, Integer, String, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -20,3 +21,8 @@ class MiningWorkflowOutputCriteria(Base):
     business_name = Column(String(255))
     source_table = Column(String(100))
     source_column = Column(String(100))
+
+    # ✅ New flag column (rename or add per migration)
+    is_parameter_flag = Column(Boolean, default=False, nullable=False)
+    # If you keep legacy:
+    # is_reserved = Column(Boolean, default=False)
