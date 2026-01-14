@@ -227,6 +227,7 @@ def execute_fnr(payload: FnRExecutePayload, db):
             {"wid": str(wid), "execution_id": uuid.uuid4(), 
              "data_keys": [], "data_records": [],
              "created_by": payload.created_by})
+        db.commit()
     payload = {
         "workflow_id": wid,
         "result": rows            
