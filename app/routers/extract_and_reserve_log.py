@@ -94,8 +94,6 @@ def save_extract_and_reserve_log(payload: ExtractAndReservePayload, db: Session 
 @router.get("/", summary="Provide Extract and Reserve Log by workflow id")
 def get_extract_and_reserve_log_by_workflow_id(workflow_id: str, db: Session = Depends(get_db)):
     logs = db.query(ExtractAndReserveLog).filter(ExtractAndReserveLog.workflow_id == workflow_id)
-    for log in logs:
-        breakpoint()
     if not logs:
         raise HTTPException(status_code=404, detail="Log not found")
     return [
