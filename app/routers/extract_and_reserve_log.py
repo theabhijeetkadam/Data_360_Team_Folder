@@ -41,7 +41,7 @@ class ExtractAndReservePayload(BaseModel):
 
 # --- FastAPI app & router ---
 app = FastAPI(title="Extract and Reserve Info API", version="1.0.0")
-router = APIRouter(prefix="/save-reservation-info", tags=["extract-and-reserve-log"])
+router = APIRouter(prefix="/extract-and-reserve-log", tags=["Extract and Reserve Log"])
 
 
 @router.post("/", summary="Save Extract and Reserve Log")
@@ -58,7 +58,7 @@ def save_extract_and_reserve_log(payload: ExtractAndReservePayload, db: Session 
             SELECT source_column
             FROM clientdb.mining_workflow_output_criteria_1
             WHERE workflow_id = :wid
-            AND  = true
+            AND is_parameter_flag = true
         """),
         {"wid": str(payload.workflow_id)},
     ).mappings().all()

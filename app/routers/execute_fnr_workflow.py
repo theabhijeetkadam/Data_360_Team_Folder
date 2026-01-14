@@ -1,6 +1,7 @@
 
 import re, logging
 from typing import List, Union, Optional
+import uuid
 from pydantic import BaseModel
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy import text
@@ -195,7 +196,7 @@ def execute_fnr(payload: FnRExecutePayload, db):
             if k in rr_keys:
                 for rec in records:
                     # Only consider records explicitly marked reserved = true
-                    if str(rec.get("reserved")).lower() == "true":
+                    if str(rec.get("is_reserved")).lower() == "true":
                         val = rec.get(k)
                         if val is not None:
                             reserved_by_key[k].add(str(val))
@@ -214,6 +215,17 @@ def execute_fnr(payload: FnRExecutePayload, db):
 
     rows = filtered_rows
 
+    if not rows:
+        log.info("No data found matching the criteria after filtering reserved records.")
+        db.execute(
+            text("""
+                INSERT INTO clientdb.extract_and_reserve_log
+                (workflow_id, execution_id, data_keys, data_records, created_by)
+                VALUES (:wid, :execution_id, :data_keys, :data_records, :created_by)
+            """),
+            {"wid": str(wid), "execution_id": uuid.uuid4(), 
+             "data_keys": [], "data_records": [],
+             "created_by": payload.created_by})
     payload = {
         "workflow_id": wid,
         "result": rows            
