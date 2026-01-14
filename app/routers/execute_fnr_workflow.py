@@ -22,6 +22,7 @@ class FnRExecutePayload(BaseModel):
     workflow_id: int
     conditions: List[Condition]
     data_volume: int
+    created_by: str
 
 def _is_ident(s: str) -> bool:
     """Minimal identifier safety: letters/underscore start; then alnum/underscore."""
