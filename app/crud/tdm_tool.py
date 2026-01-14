@@ -1,4 +1,5 @@
 
+# app/crud/tdm_tool.py
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from app.models.tdm_tool import TdmToolName
@@ -23,12 +24,11 @@ def get_tool(db: Session, tool_id: int):
 
 def create_tool(db: Session, tool: TDMToolCreate):
     try:
-        # Check duplicates
+        # Check duplicates on tool_name (unique)
         if db.query(TdmToolName).filter(TdmToolName.tool_name == tool.tool_name).first():
             raise DuplicateEntryError(message="Tool name already exists", code="409")
-        if db.query(TdmToolName).filter(TdmToolName.tool_id == tool.tool_id).first():
-            raise DuplicateEntryError(message="Tool ID already exists", code="409")
 
+        # tool_id is not provided; DB will auto-generate it
         db_tool = TdmToolName(**tool.dict())
         db.add(db_tool)
         db.commit()
@@ -37,8 +37,9 @@ def create_tool(db: Session, tool: TDMToolCreate):
 
     except DuplicateEntryError:
         raise
-    except IntegrityError:
+    except IntegrityError as e:
         db.rollback()
+        # If uniqueness fails, bubble a DuplicateEntryError
         raise DuplicateEntryError(message="Duplicate entry detected", code="409")
     except SQLAlchemyError as e:
         db.rollback()
@@ -50,6 +51,7 @@ def update_tool(db: Session, tool_id: int, tool: TDMToolUpdate):
         if not db_tool:
             raise NotFoundError(message="Tool not found", code="404")
 
+        # Apply only provided fields; tool_id is NOT updatable
         for key, value in tool.dict(exclude_unset=True).items():
             setattr(db_tool, key, value)
 
@@ -59,6 +61,10 @@ def update_tool(db: Session, tool_id: int, tool: TDMToolUpdate):
 
     except NotFoundError:
         raise
+    except IntegrityError as e:
+        db.rollback()
+        # Name uniqueness violation, etc.
+        raise DuplicateEntryError(message="Duplicate entry detected", code="409")
     except SQLAlchemyError as e:
         db.rollback()
         raise DBUpdateError(message=f"DB operation failed while updating tool: {str(e)}", code="500")
