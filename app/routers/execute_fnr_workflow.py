@@ -164,7 +164,7 @@ def execute_fnr(payload: FnRExecutePayload, db):
             SELECT source_column
             FROM clientdb.mining_workflow_output_criteria_1
             WHERE workflow_id = :wid
-            AND is_reserved = true
+            AND is_parameter_flag = true
         """),
         {"wid": str(wid)},
     ).mappings().all()
@@ -174,11 +174,11 @@ def execute_fnr(payload: FnRExecutePayload, db):
     # Normalize to plain column names (strip table qualifiers like 'customer.customer_id' -> 'customer_id')
     # data_keys = [str(r["source_column"]).split(".")[-1] for r in dk_rows]
 
-    # --- Step 2: collect reserved values by key from reservation_info and filter final_query rows ---
+    # --- Step 2: collect reserved values by key from extract_and_reserve_log and filter final_query rows ---
     res_rows = db.execute(
         text("""
             SELECT data_keys, data_records
-            FROM clientdb.reservation_info
+            FROM clientdb.extract_and_reserve_log
             WHERE workflow_id = :wid
         """),
         {"wid": str(wid)},

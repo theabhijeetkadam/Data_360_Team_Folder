@@ -43,7 +43,7 @@ from fastapi import FastAPI
 from app.routers import gold_copy_table_list
 from app.routers import workflow_extract 
 from app.routers import execute_fnr_workflow
-from app.routers import reservation_info
+from app.routers import extract_and_reserve_log
 # ✅ Create DB session for middleware
 db_session = SessionLocal()
 
@@ -189,7 +189,7 @@ app.include_router(mining_workflow_output_criteria.router)
 app.include_router(mining_fields_type.router)
 app.include_router(parameters_relation_details.router)
 app.include_router(execute_fnr_workflow.router)
-app.include_router(reservation_info.router)
+app.include_router(extract_and_reserve_log.router)
 app.include_router(extracted_data_router.router)
 #app.include_router(query_generate_ex.router, prefix="/query", tags=["Query Generator"])
 app.include_router(excel_download.router)
