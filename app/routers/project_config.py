@@ -8,7 +8,7 @@ from app.crud.project import (
 )
 from app.exceptions import NotFoundError
 
-router = APIRouter(prefix="/Project_Management_Module", tags=["Projects"])
+router = APIRouter(prefix="/Project_config_Management_Module", tags=["Projects"])
 
 def get_db():
     db = SessionLocal()
