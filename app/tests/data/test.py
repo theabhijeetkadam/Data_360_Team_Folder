@@ -2,12 +2,15 @@
 {"workflow_id":112,
 "conditions":[{"business_name":"payment_amount","operator":">","value":3000},
 			  {"business_name":"points_earned","operator":">=","value":900}],
-"data_volume":10}
+"data_volume":10,
+"created_by":"john009"}
 
 # No data
 {"workflow_id":112,
 "conditions":[{"business_name":"payment_amount","operator":">","value":7000},
-			  {"business_name":"points_earned","operator":">=","value":1800}]
+			  {"business_name":"points_earned","operator":">=","value":1800}],
+"data_volume":10,
+"created_by":"john009"
 }
 
 # Payload for save fnr log

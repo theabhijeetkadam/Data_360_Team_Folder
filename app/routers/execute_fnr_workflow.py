@@ -22,6 +22,7 @@ class FnRExecutePayload(BaseModel):
     workflow_id: int
     conditions: List[Condition]
     data_volume: int
+    created_by: str
 
 def _is_ident(s: str) -> bool:
     """Minimal identifier safety: letters/underscore start; then alnum/underscore."""
@@ -226,6 +227,7 @@ def execute_fnr(payload: FnRExecutePayload, db):
             {"wid": str(wid), "execution_id": uuid.uuid4(), 
              "data_keys": [], "data_records": [],
              "created_by": payload.created_by})
+        db.commit()
     payload = {
         "workflow_id": wid,
         "result": rows            
