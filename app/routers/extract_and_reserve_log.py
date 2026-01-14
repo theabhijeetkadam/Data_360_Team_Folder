@@ -19,9 +19,9 @@ from app.database import get_db
 
 Base = declarative_base()
 
-# --- ORM model (maps to clientdb.reservation_info) ---
-class ReservationInfo(Base):
-    __tablename__ = "reservation_info"
+# --- ORM model (maps to clientdb.extract_and_reserve_log) ---
+class ExtractAndReserveLog(Base):
+    __tablename__ = "extract_and_reserve_log"
     __table_args__ = {"schema": "clientdb"}
 
     # Keeping execution_id as PK for simplicity (generated in code as UUID)
@@ -34,20 +34,20 @@ class ReservationInfo(Base):
 
 
 # --- Pydantic payload models ---
-class ReservationPayload(BaseModel):
+class ExtractAndReservePayload(BaseModel):
     workflow_id: constr(strip_whitespace=True)
     created_by: constr(strip_whitespace=True)
     data_records: List[Dict[str, Any]]
 
 # --- FastAPI app & router ---
-app = FastAPI(title="Reservation Info API", version="1.0.0")
-router = APIRouter(prefix="/save-reservation-info", tags=["reservations"])
+app = FastAPI(title="Extract and Reserve Info API", version="1.0.0")
+router = APIRouter(prefix="/save-reservation-info", tags=["extract-and-reserve-log"])
 
 
-@router.post("/", summary="Save Reservation Information")
-def save_reservation_info(payload: ReservationPayload, db: Session = Depends(get_db)):
+@router.post("/", summary="Save Extract and Reserve Log")
+def save_extract_and_reserve_log(payload: ExtractAndReservePayload, db: Session = Depends(get_db)):
     """
-    Saves a reservation batch into clientdb.reservation_info.
+    Saves a extract and reserve log into clientdb.extract_and_reserve_log.
     - Generates a new execution_id (uuid4).
     - Derives data_keys from union of keys in data_records.
     - Persists workflow_id, execution_id, data_keys, data_records, created_by.
@@ -58,7 +58,7 @@ def save_reservation_info(payload: ReservationPayload, db: Session = Depends(get
             SELECT source_column
             FROM clientdb.mining_workflow_output_criteria_1
             WHERE workflow_id = :wid
-            AND is_reserved = true
+            AND  = true
         """),
         {"wid": str(payload.workflow_id)},
     ).mappings().all()
@@ -67,7 +67,7 @@ def save_reservation_info(payload: ReservationPayload, db: Session = Depends(get
     
     execution_id = str(uuid.uuid4())
 
-    row = ReservationInfo(
+    row = ExtractAndReserveLog(
         workflow_id=payload.workflow_id,
         execution_id=execution_id,
         data_keys=data_keys,
@@ -88,5 +88,24 @@ def save_reservation_info(payload: ReservationPayload, db: Session = Depends(get
         "execution_id": execution_id,
         "workflow_id": payload.workflow_id,
         "inserted_count": len(payload.data_records),
-        "created_at": row.created_at.isoformat() if row.created_at else datetime.utcnow().isoformat(),
+        "created_at": row.created_at.isoformat() if row.created_at else datetime.utcnow().isoformat()
     }
+
+@router.get("/", summary="Provide Extract and Reserve Log by workflow id")
+def get_extract_and_reserve_log_by_workflow_id(workflow_id: str, db: Session = Depends(get_db)):
+    logs = db.query(ExtractAndReserveLog).filter(ExtractAndReserveLog.workflow_id == workflow_id)
+    for log in logs:
+        breakpoint()
+    if not logs:
+        raise HTTPException(status_code=404, detail="Log not found")
+    return [
+        {
+            "execution_id": log.execution_id,
+            "workflow_id": log.workflow_id,
+            "data_keys": log.data_keys,
+            "data_records": log.data_records,
+            "created_at": log.created_at,
+            "created_by": log.created_by,
+        }
+        for log in logs
+    ]

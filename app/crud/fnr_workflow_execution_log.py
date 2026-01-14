@@ -5,6 +5,7 @@ from app.models import fnr_workflow_execution_log as models
 import uuid
 from sqlalchemy import text
 
+
 def create_workflow_execution_log(payload: schemas.WorkflowExecutionLogCreate, db: Session):
 
     result = db.execute(text("select project_id, env_id from clientdb.mining_workflows_reserve where workflow_id = :wid"), {"wid": payload.workflow_id})
