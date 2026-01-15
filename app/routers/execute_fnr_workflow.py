@@ -4,14 +4,22 @@ from typing import List, Union, Optional
 import uuid
 from pydantic import BaseModel
 from fastapi import APIRouter, HTTPException, Depends
-from sqlalchemy import text
+from sqlalchemy import text, MetaData, Table, insert
 from sqlalchemy.orm import Session
-from app.database import get_db
+from app.database import get_db, engine
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/execute-fnr-workflow", tags=["FnR Workflow Execution"])
 
 ALLOWED_OPS = {"=", "!=", "<", "<=", ">", ">="}
+
+metadata = MetaData(schema="clientdb")
+
+extract_and_reserve_log = Table(
+    "extract_and_reserve_log",
+    metadata,
+    autoload_with=engine,
+)
 
 class Condition(BaseModel):
     business_name: str
@@ -218,16 +226,17 @@ def execute_fnr(payload: FnRExecutePayload, db):
 
     if not rows:
         log.info("No data found matching the criteria after filtering reserved records.")
-        db.execute(
-            text("""
-                INSERT INTO clientdb.extract_and_reserve_log
-                (workflow_id, execution_id, data_keys, data_records, created_by)
-                VALUES (:wid, :execution_id, :data_keys, :data_records, :created_by)
-            """),
-            {"wid": str(wid), "execution_id": uuid.uuid4(), 
-             "data_keys": [], "data_records": [],
-             "created_by": payload.created_by})
+        params = {
+            "workflow_id": str(wid),
+            "execution_id": uuid.uuid4(),
+            "data_keys": data_keys,
+            "data_records": [],     # if JSONB column, this will be stored/displayed as []
+            "created_by": payload.created_by,
+        }
+        stmt = insert(extract_and_reserve_log).values(**params)
+        db.execute(stmt)
         db.commit()
+        db.close()
     payload = {
         "workflow_id": wid,
         "result": rows            
